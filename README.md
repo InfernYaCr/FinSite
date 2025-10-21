@@ -94,3 +94,31 @@ Theme configuration
 
 Docs and examples
 - See components/ui/README.md for usage examples of each primitive
+
+---
+
+# SEO & Structured Data
+
+The project includes reusable SEO utilities and App Router integrations:
+
+What’s included
+- Dynamic sitemap at /sitemap.xml (app/sitemap.ts)
+- robots.txt at /robots.txt (app/robots.ts)
+- Canonical, OpenGraph and Twitter metadata via Next Metadata API
+- JSON-LD helpers for breadcrumbs, organization and financial products (loans)
+
+Configuration
+- Set the public site URL in .env:
+  SITE_URL="http://localhost:3000"
+
+Utilities
+- src/lib/seo.ts provides:
+  - siteConfig and absoluteUrl
+  - buildPageMetadata({ title, description, path, images }) to easily define per-page metadata
+  - JSON-LD builders: organizationJsonLd, breadcrumbsJsonLd, loanFinancialProductJsonLd, reviewJsonLd, itemListJsonLd
+- components/seo/JsonLd.tsx to render script type="application/ld+json"
+
+Usage
+- See app/layout.tsx for default site metadata and Organization JSON-LD
+- See app/page.tsx for homepage metadata
+- See app/loans/page.tsx for per-page metadata, BreadcrumbList and ItemList JSON-LD, and examples of product-level JSON-LD for top items
