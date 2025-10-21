@@ -1,3 +1,5 @@
+import { slugify } from './utils'
+
 export type PayoutType = 'card' | 'bank' | 'cash' | 'ewallet'
 export type BorrowerRequirement =
   | 'passport'
@@ -165,4 +167,13 @@ export function filterSortPaginate(
   const paged = items.slice(start, start + perPage)
 
   return { items: paged, total, page: safePage, perPage, totalPages }
+}
+
+export function makeOfferSlug(offer: LoanOffer): string {
+  // Include id to guarantee uniqueness while keeping it human-readable
+  return slugify(`${offer.title} ${offer.organization} ${offer.id}`)
+}
+
+export function findOfferBySlug(offers: LoanOffer[], slug: string): LoanOffer | undefined {
+  return offers.find(o => makeOfferSlug(o) === slug)
 }
