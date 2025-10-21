@@ -33,6 +33,24 @@ Enums: OfferStatus, OfferType, ReviewRating, ClickType
 5. (Optional) Open Prisma Studio:
    npm run prisma:studio
 
+## Demo data seeding
+The project includes a deterministic seed script that creates:
+- 8–10 organizations
+- 50+ offers with varied types, statuses, dates, cities, and tags
+- A catalog of cities and tags
+- Sample reviews on many published offers
+
+How to run:
+1. Ensure the database is up and migrated (see steps above)
+2. Seed the database:
+   npm run db:seed
+
+This uses prisma/seed.cjs with a fixed RNG seed to ensure the same locale-friendly content on every run. You can inspect the data using Prisma Studio:
+   npm run prisma:studio
+
+You can also reset the database and re-apply migrations and seed in one go:
+   npm run db:reset
+
 ## Useful scripts
 - npm run prisma:generate
 - npm run prisma:migrate:dev
@@ -41,6 +59,7 @@ Enums: OfferStatus, OfferType, ReviewRating, ClickType
 - npm run db:up
 - npm run db:down
 - npm run db:reset
+- npm run db:seed
 
 ## Notes
 - The initial migration is included under prisma/migrations.

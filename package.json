@@ -9,12 +9,18 @@
     "prisma:studio": "prisma studio",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "db:reset": "docker compose down -v && docker compose up -d db && prisma migrate reset --force"
+    "db:reset": "docker compose down -v && docker compose up -d db && prisma migrate reset --force",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
   },
   "dependencies": {
-    "@prisma/client": "^5.20.0"
+    "@prisma/client": "^5.20.0",
+    "@faker-js/faker": "^9.1.0"
   },
   "devDependencies": {
-    "prisma": "^5.20.0"
+    "prisma": "^5.20.0",
+    "dotenv": "^16.4.5"
   }
 }
