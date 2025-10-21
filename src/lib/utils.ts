@@ -34,3 +34,13 @@ export function cn(...inputs: ClassValue[]): string {
   const unique = Array.from(new Set(classes)).join(' ')
   return unique
 }
+
+export function slugify(input: string): string {
+  return input
+    .toString()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0400-\u04FF]+/g, '-')
+    .replace(/(^-|-$)+/g, '')
+}

@@ -1,4 +1,5 @@
 import type { LoanOffer } from '@/src/lib/loans'
+import { makeOfferSlug } from '@/src/lib/loans'
 
 export default function LoanCard({ offer }: { offer: LoanOffer }) {
   return (
@@ -43,10 +44,10 @@ export default function LoanCard({ offer }: { offer: LoanOffer }) {
 
       <div className="mt-4">
         <a
-          href="#"
+          href={`/loans/${makeOfferSlug(offer)}`}
           className="inline-flex rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
-          Оформить
+          Подробнее
         </a>
       </div>
     </article>
