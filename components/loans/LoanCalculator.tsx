@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import type { LoanOffer } from '@/src/lib/loans'
+import { Input } from '@/components/ui/input'
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(Math.max(n, min), max)
@@ -42,15 +43,14 @@ export default function LoanCalculator({ offer }: { offer: LoanOffer }) {
             max={offer.amountMax}
             step={1000}
             value={a}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            onChange={(e) => setAmount(Number((e.target as HTMLInputElement).value))}
           />
-          <input
+          <Input
             type="number"
-            className="w-full rounded-md border px-2 py-1 text-sm"
             value={a}
             min={offer.amountMin}
             max={offer.amountMax}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            onChange={(e) => setAmount(Number((e.target as HTMLInputElement).value))}
           />
         </div>
 
@@ -62,15 +62,14 @@ export default function LoanCalculator({ offer }: { offer: LoanOffer }) {
             max={offer.termMax}
             step={1}
             value={t}
-            onChange={(e) => setTerm(Number(e.target.value))}
+            onChange={(e) => setTerm(Number((e.target as HTMLInputElement).value))}
           />
-          <input
+          <Input
             type="number"
-            className="w-full rounded-md border px-2 py-1 text-sm"
             value={t}
             min={offer.termMin}
             max={offer.termMax}
-            onChange={(e) => setTerm(Number(e.target.value))}
+            onChange={(e) => setTerm(Number((e.target as HTMLInputElement).value))}
           />
         </div>
 
@@ -84,16 +83,15 @@ export default function LoanCalculator({ offer }: { offer: LoanOffer }) {
             max={offer.rateTo}
             step={0.1}
             value={r}
-            onChange={(e) => setRate(Number(e.target.value))}
+            onChange={(e) => setRate(Number((e.target as HTMLInputElement).value))}
           />
-          <input
+          <Input
             type="number"
-            className="w-full rounded-md border px-2 py-1 text-sm"
             value={r}
             min={offer.rateFrom}
             max={offer.rateTo}
             step={0.1}
-            onChange={(e) => setRate(Number(e.target.value))}
+            onChange={(e) => setRate(Number((e.target as HTMLInputElement).value))}
           />
         </div>
       </div>
