@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OfferStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OfferType {
+  DEAL
+  COUPON
+  DISCOUNT
+  EVENT
+  JOB
+}
+
+enum ReviewRating {
+  ONE
+  TWO
+  THREE
+  FOUR
+  FIVE
+}
+
+enum ClickType {
+  VIEW
+  CLICK
+  APPLY
+  CALL
+  WEBSITE
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  website     String?
+  cityId      String?
+  city        City?    @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  offers      Offer[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Offer {
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  status          OfferStatus  @default(PUBLISHED)
+  type            OfferType    @default(DEAL)
+  url             String?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cityId          String?
+  city            City?        @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  tags            Tag[]
+  reviews         Review[]
+  clicks          ClickTracking[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([cityId])
+  @@index([status, endsAt])
+}
+
+model City {
+  id             String         @id @default(cuid())
+  name           String
+  state          String?
+  countryCode    String
+  slug           String         @unique
+  organizations  Organization[]
+  offers         Offer[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  offers      Offer[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id        String        @id @default(cuid())
+  rating    ReviewRating
+  title     String?
+  comment   String?
+  offerId   String
+  offer     Offer         @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([offerId])
+}
+
+model ClickTracking {
+  id          String    @id @default(cuid())
+  offerId     String
+  offer       Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  type        ClickType @default(CLICK)
+  userAgent   String?
+  referrer    String?
+  ipAddress   String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  createdAt   DateTime  @default(now())
+
+  @@index([offerId, createdAt])
+}
