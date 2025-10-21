@@ -8,18 +8,13 @@ export default function Nav() {
         <nav aria-label="Основная навигация">
           <ul className="flex items-center gap-4 text-sm text-gray-700">
             <li>
-              <a className="hover:text-black" href="#">
-                Раздел 1
+              <a className="hover:text-black" href="/">
+                Главная
               </a>
             </li>
             <li>
-              <a className="hover:text-black" href="#">
-                Раздел 2
-              </a>
-            </li>
-            <li>
-              <a className="hover:text-black" href="#">
-                Раздел 3
+              <a className="hover:text-black" href="/loans">
+                Займы
               </a>
             </li>
           </ul>
