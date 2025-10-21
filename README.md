@@ -64,3 +64,33 @@ You can also reset the database and re-apply migrations and seed in one go:
 ## Notes
 - The initial migration is included under prisma/migrations.
 - The Prisma schema targets PostgreSQL using the DATABASE_URL defined in your .env file.
+
+---
+
+# Design System (shadcn/ui-inspired)
+
+We added a Tailwind-based design system inspired by shadcn/ui. It provides a consistent theme and a set of reusable UI primitives.
+
+Highlights
+- Dark mode via `.dark` class
+- Theme tokens powered by CSS variables (see app/globals.css)
+- Tree-shaking friendly named exports
+- Primitives live under `components/ui`
+
+Available components
+- Button, Input, Select, Tabs, Card, Table, Badge
+- Pagination, Breadcrumbs, Dialog (modal), Sheet (drawer)
+
+How to use
+- Import components directly from their files (best for tree-shaking):
+  import { Button } from '@/components/ui/button'
+
+- Or import from the barrel file:
+  import { Button } from '@/components/ui'
+
+Theme configuration
+- tailwind.config.js defines color tokens and other theme extensions
+- app/globals.css sets CSS variables for light and dark schemes and base styles
+
+Docs and examples
+- See components/ui/README.md for usage examples of each primitive
