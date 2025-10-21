@@ -1,3 +1,12 @@
+import type { Metadata } from 'next'
+import { buildPageMetadata } from '@/src/lib/seo'
+
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Главная',
+  description: 'Главная страница демо-проекта на Next.js 14 (RU)',
+  path: '/',
+})
+
 export default function HomePage() {
   return (
     <section className="space-y-4">

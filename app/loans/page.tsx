@@ -3,13 +3,16 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import PageHeader from '@/components/PageHeader'
 import FilterBar from '@/components/loans/FilterBar'
 import OffersList from '@/components/loans/OffersList'
+import JsonLd from '@/components/seo/JsonLd'
 import { generateOffers, filterSortPaginate, type LoanQuery, type BorrowerRequirement, type PayoutType } from '@/src/lib/loans'
+import { buildPageMetadata, breadcrumbsJsonLd, itemListJsonLd, loanFinancialProductJsonLd, reviewJsonLd } from '@/src/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Каталог займов — фильтры, сортировка и пагинация',
   description:
-    'Выберите подходящий займ: фильтруйте по сумме, сроку, ставке, способу выплаты и требованиям. Сортировка по рейтингу, ставке и сумме. ',
-}
+    'Выберите подходящий займ: фильтруйте по сумме, сроку, ставке, способу выплаты и требованиям. Сортировка по рейтингу, ставке и сумме.',
+  path: '/loans',
+})
 
 function parseArrayParam(value: string | string[] | undefined): string[] | undefined {
   if (!value) return undefined
@@ -89,6 +92,33 @@ export default function LoansPage({
     ? buildHref('/loans', params, { page: String(result.page + 1) })
     : null
 
+  // Build JSON-LD
+  const crumbs = breadcrumbsJsonLd([
+    { name: 'Главная', item: '/' },
+    { name: 'Займы' },
+  ])
+  const list = itemListJsonLd(result.items.map(it => ({ name: it.title, url: '/loans' })))
+  const products = result.items.slice(0, 3).map(it =>
+    loanFinancialProductJsonLd({
+      name: it.title,
+      brand: it.organization,
+      url: '/loans',
+      interestRate: it.rateFrom,
+      amountMin: it.amountMin,
+      amountMax: it.amountMax,
+      aggregateRating: { ratingValue: it.rating, reviewCount: 0 },
+    })
+  )
+  const review = result.items[0]
+    ? {
+        itemName: result.items[0].title,
+        author: 'Пользователь',
+        reviewBody: 'Хорошие условия и быстрый процесс оформления.',
+        ratingValue: result.items[0].rating,
+        url: '/loans',
+      }
+    : null
+
   return (
     <section className="space-y-4">
       <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Займы' }]} />
@@ -116,6 +146,13 @@ export default function LoansPage({
         prevHref={prevHref}
         nextHref={nextHref}
       />
+
+      <JsonLd data={crumbs} id="breadcrumbs-jsonld" />
+      <JsonLd data={list} id="itemlist-jsonld" />
+      {products.map((p, idx) => (
+        <JsonLd key={idx} data={p} id={`loan-jsonld-${idx}`} />
+      ))}
+      {review ? <JsonLd data={reviewJsonLd(review)} id="review-jsonld" /> : null}
 
       <section className="prose max-w-none prose-h2:mt-6">
         <h2>О займах: что важно знать</h2>
