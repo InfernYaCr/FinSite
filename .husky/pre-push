@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Verify before push
+npm run -s typecheck && npm run -s lint && npm run -s test:ci
