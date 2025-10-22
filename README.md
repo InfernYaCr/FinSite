@@ -52,6 +52,7 @@ You can also reset the database and re-apply migrations and seed in one go:
    npm run db:reset
 
 ## Useful scripts
+- npm run build (generates the Prisma client, then compiles the Next.js app)
 - npm run prisma:generate
 - npm run prisma:migrate:dev
 - npm run prisma:migrate:deploy
@@ -60,6 +61,40 @@ You can also reset the database and re-apply migrations and seed in one go:
 - npm run db:down
 - npm run db:reset
 - npm run db:seed
+
+## Deployment (Vercel)
+
+The repository includes a `vercel.json` file that captures the recommended Vercel configuration for this project. It locks the framework preset to Next.js, disables telemetry, and maps the preferred install, dev, and build commands.
+
+### Build and workflow defaults
+
+- `npm run build` executes `prisma generate && next build` so the Prisma client is always available before the Next.js compiler runs (locally and on Vercel).
+- `npm run dev` is exposed to `vercel dev` for parity with local development.
+- Preview and production deployments are both enabled, and the `main` branch is treated as production.
+
+### Environment variables
+
+Define the following secrets in Vercel; the `vercel.json` file references them for the appropriate environments. Secrets can be created with `vercel secrets add <name> <value>` or through the Vercel dashboard.
+
+| Variable | Environments | Secret name | Description |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | Preview | `preview_database_url` | Connection string for the preview database (used by Prisma at runtime).
+| `DATABASE_URL` | Production | `production_database_url` | Connection string for the production database.
+| `SITE_URL` | Preview | `preview_site_url` | Canonical/absolute base URL for preview deployments (used by SEO helpers and the sitemap generator).
+| `SITE_URL` | Production | `production_site_url` | Canonical/absolute base URL for production deployments.
+| `NEXT_PUBLIC_SITE_URL` | Preview | `preview_site_url` | Client-visible base URL; keep in sync with `SITE_URL`.
+| `NEXT_PUBLIC_SITE_URL` | Production | `production_site_url` | Client-visible base URL for production.
+
+Optional: add `DIRECT_URL` secrets if you are using connection pooling providers that require a secondary, non-pooled connection string for Prisma Migrate.
+
+### Initial Vercel setup
+
+1. Link the project: `vercel link` (from the repository root).
+2. Create the secrets listed above (for example, `vercel secrets add preview_database_url "postgres://user:pass@host:5432/db"`).
+3. Pull the environment configuration locally with `vercel env pull .env.vercel.local` so you can mirror the deployment settings in development.
+4. Run `npm run prisma:migrate:deploy` against the target database before promoting a deployment to ensure schema migrations are applied.
+
+Every push to a non-`main` branch produces a Preview deployment. Merges to `main` (or `vercel --prod`) promote the latest build to production using the same configuration.
 
 ## Notes
 - The initial migration is included under prisma/migrations.

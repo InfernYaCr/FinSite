@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "git": {
+    "deploymentEnabled": {
+      "preview": true,
+      "production": true
+    },
+    "productionBranch": "main"
+  },
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "preview": {
+    "env": {
+      "DATABASE_URL": "@preview_database_url",
+      "SITE_URL": "@preview_site_url",
+      "NEXT_PUBLIC_SITE_URL": "@preview_site_url"
+    }
+  },
+  "production": {
+    "env": {
+      "DATABASE_URL": "@production_database_url",
+      "SITE_URL": "@production_site_url",
+      "NEXT_PUBLIC_SITE_URL": "@production_site_url"
+    }
+  }
+}
