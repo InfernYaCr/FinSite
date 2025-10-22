@@ -20,11 +20,11 @@ const requirementOptions: BorrowerRequirement[] = [
   'age18Plus',
 ]
 
-export default function FilterBar({ initial }: { initial: FilterValues }) {
+export default function FilterBar({ initial, action = '/loans' }: { initial: FilterValues; action?: string }) {
   const reqSet = new Set(initial.requirements ?? [])
 
   return (
-    <form method="get" action="/loans" className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4">
+    <form method="get" action={action} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4">
       <div className="flex flex-col gap-1">
         <label htmlFor="amount" className="text-sm text-gray-600">
           Сумма (₽)
