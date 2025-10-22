@@ -3,7 +3,7 @@ import { siteConfig, absoluteUrl } from '@/src/lib/seo'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
-  const routes = ['', '/loans']
+  const routes = ['', '/loans', '/compare']
   return routes.map(path => ({
     url: absoluteUrl(path),
     lastModified: now,

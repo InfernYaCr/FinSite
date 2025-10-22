@@ -49,10 +49,10 @@ export default function Nav() {
 
             {/* Featured CTA */}
             <a
-              href="/loans"
+              href="/compare"
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              <span>Лучшее предложение</span>
+              <span>Сравнить займы</span>
             </a>
 
             {/* Mobile menu toggle */}
@@ -155,6 +155,7 @@ export default function Nav() {
               <div className="grid gap-1 p-3 text-sm">
                 <a className="rounded-md px-3 py-2 hover:bg-gray-50" href="/">Главная</a>
                 <a className="rounded-md px-3 py-2 hover:bg-gray-50" href="/loans">Займы</a>
+                <a className="rounded-md px-3 py-2 hover:bg-gray-50" href="/compare">Сравнение займов</a>
               </div>
               <div className="grid gap-1 p-3 text-sm">
                 <div className="px-3 text-xs font-medium uppercase text-gray-500">Категории</div>

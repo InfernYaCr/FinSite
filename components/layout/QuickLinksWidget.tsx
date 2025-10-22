@@ -1,6 +1,7 @@
 const links: { href: string; label: string }[] = [
   { href: '/', label: 'Главная' },
   { href: '/loans', label: 'Займы' },
+  { href: '/compare', label: 'Сравнение займов' },
   { href: '#kredits', label: 'Кредиты (скоро)' },
   { href: '#cards', label: 'Кредитные карты (скоро)' },
   { href: '#mortgage', label: 'Ипотека (скоро)' },
