@@ -8,37 +8,9 @@ import RelatedOffers from '@/components/loans/RelatedOffers'
 import JsonLd from '@/components/seo/JsonLd'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { buildPageMetadata, breadcrumbsJsonLd, loanFinancialProductJsonLd, reviewJsonLd } from '@/src/lib/seo'
-import { generateOffers, findOfferBySlug, makeOfferSlug, type LoanOffer } from '@/src/lib/loans'
+import { generateOffers, findOfferBySlug, makeOfferSlug } from '@/src/lib/loans'
+import { generateReviews } from '@/src/lib/reviews'
 
-function generateReviews(seed: string, count = 3) {
-  // Simple deterministic pseudo-random based on seed
-  let s = 0
-  for (let i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0
-  function rand() {
-    s = (1664525 * s + 1013904223) >>> 0
-    return s / 0xffffffff
-  }
-  const authors = ['Алексей', 'Мария', 'Иван', 'Ольга', 'Дмитрий', 'Елена']
-  const comments = [
-    'Быстро одобрили, условия прозрачные.',
-    'Удобно, но ставку хотелось бы ниже.',
-    'Оформление заняло 10 минут, всё ок.',
-    'Поддержка отвечает быстро, впечатления положительные.',
-    'Хороший сервис, деньги пришли на карту.',
-  ]
-  const items = [] as { id: string; author: string; rating: number; comment: string; date: string }[]
-  const n = Math.max(2, Math.min(count, 5))
-  for (let i = 0; i < n; i++) {
-    items.push({
-      id: `${seed}_${i}`,
-      author: authors[Math.floor(rand() * authors.length)],
-      rating: 3 + Math.round(rand() * 2),
-      comment: comments[Math.floor(rand() * comments.length)],
-      date: new Date(Date.now() - Math.floor(rand() * 60) * 24 * 60 * 60 * 1000).toISOString(),
-    })
-  }
-  return items
-}
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const offers = generateOffers(120)
