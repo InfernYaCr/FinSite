@@ -119,164 +119,111 @@ Keep `.env` out of version control (`.gitignore` already covers it). Use the sam
 
 ## VPS deployments
 
-### Multi-stage Docker build
+### Multi-stage Docker image
 
-Create `Dockerfile` (if you deploy outside Vercel):
-
-```Dockerfile
-# Stage 1 – install deps & build
-FROM node:20-slim AS builder
-WORKDIR /app
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
-RUN npm install --legacy-peer-deps
-COPY . .
-RUN npm run build
-
-# Stage 2 – runtime image
-FROM node:20-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-RUN npm install --omit=dev
-CMD ["npm", "run", "start"]
-```
-
-Bundle it with Docker Compose:
-
-```yaml
-app:
-  build: .
-  env_file: .env
-  ports:
-    - "3000:3000"
-  depends_on:
-    db:
-      condition: service_healthy
-  command: "npm run start"
-  environment:
-    DATABASE_URL: ${DATABASE_URL}
-    SITE_URL: ${SITE_URL}
-    NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-db:
-  image: postgres:16
-  restart: unless-stopped
-  environment:
-    POSTGRES_USER: postgres
-    POSTGRES_PASSWORD: postgres
-    POSTGRES_DB: app
-  healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U postgres"]
-    interval: 5s
-    retries: 10
-  volumes:
-    - pgdata:/var/lib/postgresql/data
-volumes:
-  pgdata:
-```
-
-Build & deploy:
+The repository now ships with a production-ready multi-stage `Dockerfile` that targets Node.js 20, installs `libvips` for Next.js image optimization, and prunes development dependencies before publishing the runtime layer. The entrypoint (`scripts/docker-entrypoint.sh`) applies Prisma migrations on every container boot and supports optional seeding via `RUN_SEED_ON_START`.
 
 ```bash
-docker compose build
-docker compose up -d
-npx prisma migrate deploy
-npm run db:seed # optional, run inside the container once
+docker build --target runner -t finsite:latest .
+docker run --env-file .env -p 3000:3000 finsite:latest
 ```
 
-### Reverse proxy configuration
+Set `SKIP_MIGRATIONS=true` if you need to skip the automatic `prisma migrate deploy` (for example when running migrations separately).
 
-**Nginx** (`/etc/nginx/conf.d/finsite.conf`):
+### Docker Compose stack (app + optional Postgres + Nginx)
 
-```nginx
-server {
-  listen 80;
-  server_name example.com;
+`docker-compose.yml` orchestrates three services:
 
-  location /.well-known/acme-challenge/ {
-    root /var/www/html;
-  }
+- `app` – the Next.js container published from the Dockerfile.
+- `nginx` – reverse proxy built from `deploy/nginx/` with brotli/gzip, 80→443 redirects, ACME webroot, and caching for `/_next/static` & `/_next/image`.
+- `db` – optional Postgres 16 service gated behind the `db` profile for people without a managed database.
 
-  location / {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_hide_header X-Powered-By;
-    proxy_buffering on;
-    proxy_max_temp_file_size 0;
-  }
-
-  gzip on;
-  gzip_types text/plain text/css application/json application/javascript;
-  gzip_min_length 1024;
-}
-```
-
-Use Certbot for TLS:
+Bootstrap the stack on a VPS:
 
 ```bash
-certbot --nginx -d example.com -d www.example.com
+cp .env.example .env
+# edit .env to set DATABASE_URL=postgresql://postgres:postgres@db:5432/app?schema=public
+# set SITE_URL/NEXT_PUBLIC_SITE_URL to https://your-domain
 ```
 
-**Caddy** alternative:
-
-```
-example.com {
-  reverse_proxy 127.0.0.1:3000
-  encode zstd gzip
-  header -Server
-  header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-  tls {
-    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-  }
-}
-```
-
-Both configs enable gzip/brotli and hide framework headers. Ensure `/go/` remains uncached so click tracking executes per request.
-
-### Bare-metal without containers
-
-1. Provision Node.js 20, `build-essential`, and `postgresql-client`.
-2. Clone the repository and install dependencies (`npm install`).
-3. Build the app: `npm run build`.
-4. Run Prisma migrations against your managed PostgreSQL instance: `npx prisma migrate deploy`.
-5. Seed data if needed: `npm run db:seed`.
-6. Create a systemd unit (`/etc/systemd/system/finsite.service`):
-
-```
-[Unit]
-Description=FinSite Next.js application
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/var/www/finsite
-ExecStart=/usr/bin/npm run start
-Restart=always
-RestartSec=5
-Environment=NODE_ENV=production
-Environment=DATABASE_URL=postgres://...
-Environment=SITE_URL=https://example.com
-Environment=NEXT_PUBLIC_SITE_URL=https://example.com
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
+Update `deploy/nginx/finsite.conf` with the production hostnames before building the proxy image. Request certificates once using the ACME webroot:
 
 ```bash
+docker run --rm -it \
+  -v "$(pwd)/.infra/letsencrypt:/etc/letsencrypt" \
+  -v "$(pwd)/.infra/certbot:/var/www/certbot" \
+  certbot/certbot certonly --webroot \
+  --webroot-path=/var/www/certbot \
+  --email ops@example.com \
+  --agree-tos --no-eff-email \
+  -d finsite.example.com -d www.finsite.example.com
+```
+
+Start the services:
+
+```bash
+# with the bundled Postgres container
+COMPOSE_PROFILES=app,nginx,db docker compose up -d
+
+# if you use an external database
+COMPOSE_PROFILES=app,nginx docker compose up -d
+```
+
+Set `APP_IMAGE` to the tag you built or pulled (the GitHub Actions workflow sets it automatically). When `APP_IMAGE` is unset, Compose falls back to building the image locally from the repository source.
+
+Migrations are executed automatically by the entrypoint, but you can rerun them (and seed) at any time:
+
+```bash
+docker compose exec -T app npx prisma migrate deploy --schema prisma/schema.prisma
+docker compose exec -T app npm run db:seed
+```
+
+> **Note:** `npm run db:seed` clears and re-populates the database with deterministic fixtures—use it for first-time installs, demos, or staging environments.
+
+Mounts under `.infra/letsencrypt` and `.infra/certbot` persist TLS assets and ACME challenges respectively. Expose `/healthz` in your load balancer; Nginx forwards calls to the Next.js health endpoint at `/api/healthz`. Set `RUN_SEED_ON_START=true` in `.env` if you want the container to seed on boot (helpful for disposable staging environments).
+
+### Systemd unit (bare-metal alternative)
+
+For teams that prefer running directly on the host, copy `deploy/systemd/finsite.service` to `/etc/systemd/system/finsite.service`, create an unprivileged user, and configure an environment file:
+
+```bash
+sudo adduser --system --group --home /var/www/finsite finsite
+sudo mkdir -p /etc/finsite
+sudo tee /etc/finsite/finsite.env >/dev/null <<'EOF'
+NODE_ENV=production
+DATABASE_URL=postgresql://user:pass@db-host:5432/app?schema=public
+SITE_URL=https://finsite.example.com
+NEXT_PUBLIC_SITE_URL=https://finsite.example.com
+RUN_SEED_ON_START=false
+EOF
+sudo chown -R finsite:finsite /var/www/finsite
+```
+
+Deploy application code to `/var/www/finsite`, run `npm install` and `npm run build`, then enable the unit:
+
+```bash
+sudo systemctl daemon-reload
 sudo systemctl enable finsite
 sudo systemctl start finsite
 ```
 
-Pair it with the Nginx/Caddy configs above for TLS and caching.
+The service applies migrations on start and conditionally seeds when `RUN_SEED_ON_START=true`.
+
+### GitHub Actions continuous deployment
+
+`.github/workflows/deploy.yml` builds and pushes the Docker image to GHCR, then connects to the VPS over SSH to refresh the Compose stack, execute `prisma migrate deploy`, and optionally seed data. Configure the following secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `GHCR_USERNAME`, `GHCR_TOKEN` | Credentials for `docker login ghcr.io` |
+| `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` | Connection details for the target server |
+| `VPS_APP_DIR` | Absolute path to the project on the VPS (contains `docker-compose.yml`) |
+| `VPS_COMPOSE_PROFILES` (optional) | Override the profiles passed to `docker compose up` |
+| `RUN_SEED_ON_DEPLOY` (optional) | When `true`, runs `npm run db:seed` after migrations |
+
+> **Heads-up:** the seed script truncates data before re-populating fixtures—enable the flag for first-time deployments or demo environments only.
+
+Deployments run automatically on pushes to `main` and can be triggered manually via *workflow_dispatch*.
 
 ## On-demand revalidation & ISR
 
@@ -286,23 +233,24 @@ Pair it with the Nginx/Caddy configs above for TLS and caching.
 
 ## Health checks
 
-- Liveness: probe `GET /` or `GET /loans` for HTTP 200.
-- Lightweight API check: add `app/api/health/route.ts` returning `{ status: 'ok' }` once you move beyond demo data.
-- Database readiness: `pg_isready` (already included in Docker) or an explicit `SELECT 1;` from a cron/smoke test.
+- Container liveness: `GET http://localhost:3000/api/healthz` (used by the Docker health check). The handler performs a `SELECT 1` through Prisma and returns `{ status: 'ok', database: 'reachable' }`.
+- Reverse proxy: expose `https://<domain>/healthz`, which Nginx forwards to the upstream `/api/healthz`.
+- Database readiness: `pg_isready` (bundled in the Postgres service) or a lightweight `SELECT 1` cron via `docker compose exec app`.
 
-Expose `/healthz` via reverse proxy and monitor with your orchestrator (Vercel’s built-in health checks, Kubernetes probe, etc.).
+Monitor these endpoints with your orchestrator and alerting stack.
 
 ## Rollback procedure
 
 - **Vercel** – open the deployment list, pick the previous healthy deployment, and click "Promote to Production". Because Prisma migrations are versioned, rolling back application code does not automatically revert schema changes; use `prisma migrate resolve --rolled-back` followed by a manual migration if required.
-- **Docker / VPS** – tag releases (`docker build -t finsite:<git-sha> .`). To roll back, re-deploy the previous tag:
+- **Docker / VPS** – images published to GHCR are tagged with the commit SHA and `latest`. To roll back, point the stack at a previous tag and recreate the app container:
 
   ```bash
-  docker compose pull app@sha256:<digest>
+  export APP_IMAGE=ghcr.io/<org>/<repo>:<previous-sha>
   docker compose up -d app
+  docker compose ps
   ```
 
-  Keep database migrations backwards-compatible to avoid data loss. For emergency cases, restore from a PITR snapshot before redeploying the older image.
+  Keep Prisma migrations backwards-compatible; if you must revert a schema change, use `prisma migrate resolve --rolled-back <migration-id>` and restore from database backups when necessary.
 
 ## Observability and logging
 

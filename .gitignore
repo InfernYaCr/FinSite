@@ -17,6 +17,7 @@ prisma/*.db-journal
 
 # Docker
 .volumes/
+/.infra/
 
 # OS
 .DS_Store

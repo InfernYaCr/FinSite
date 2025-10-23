@@ -1,0 +1,96 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_name: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine image name
+        id: meta
+        run: |
+          IMAGE="${{ github.repository }}"
+          echo "image=${IMAGE,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js bundles
+        run: npm run build
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ steps.meta.outputs.image }}:${{ github.sha }},ghcr.io/${{ steps.meta.outputs.image }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          VPS_COMPOSE_PROFILES: ${{ secrets.VPS_COMPOSE_PROFILES }}
+          RUN_SEED_ON_DEPLOY: ${{ secrets.RUN_SEED_ON_DEPLOY }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_USERNAME,GHCR_TOKEN,VPS_COMPOSE_PROFILES,RUN_SEED_ON_DEPLOY
+          script: |
+            set -euo pipefail
+            IMAGE="ghcr.io/${{ needs.build-and-push.outputs.image_name }}:${{ github.sha }}"
+            docker login ghcr.io -u "$GHCR_USERNAME" -p "$GHCR_TOKEN"
+            cd ${{ secrets.VPS_APP_DIR }}
+            export APP_IMAGE="$IMAGE"
+            if [ -n "${VPS_COMPOSE_PROFILES:-}" ]; then
+              export COMPOSE_PROFILES="$VPS_COMPOSE_PROFILES"
+            else
+              export COMPOSE_PROFILES="app,nginx,db"
+            fi
+            docker compose pull app
+            docker compose up -d
+            docker compose exec -T app npx prisma migrate deploy --schema prisma/schema.prisma
+            if [ "${RUN_SEED_ON_DEPLOY:-false}" = "true" ]; then
+              docker compose exec -T app npm run db:seed
+            fi
+            docker compose ps

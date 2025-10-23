@@ -1,21 +1,66 @@
-version: "3.8"
+version: "3.9"
+
 services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/your-org/finsite:latest}
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL}
+      SITE_URL: ${SITE_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      RUN_SEED_ON_START: ${RUN_SEED_ON_START:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   db:
     image: postgres:16
-    container_name: prisma_postgres
+    profiles:
+      - db
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  nginx:
+    build:
+      context: ./deploy/nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${NGINX_SSL_DIR:-./.infra/letsencrypt}:/etc/letsencrypt
+      - ${CERTBOT_WEBROOT:-./.infra/certbot}:/var/www/certbot
+      - nginx-cache:/var/cache/nginx
+
 volumes:
   pgdata:
+  nginx-cache:

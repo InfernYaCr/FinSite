@@ -88,9 +88,61 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#data-model-overview) for full 
 ## Deployment overview
 
 - Vercel-friendly: `vercel.json` locks the framework preset and commands.
-- Docker Compose (`docker-compose.yml`) provisions Postgres for local and VPS scenarios.
-- After deploying, run `npx prisma migrate deploy` and seed as needed.
+- Production Docker/Compose stack (`docker-compose.yml`) couples the app container with an Nginx reverse proxy and optional Postgres service.
+- GitHub Actions workflow builds/pushes Docker images to GHCR and deploys to a VPS over SSH.
+- Bare-metal fallback with a systemd unit (`deploy/systemd/finsite.service`).
 - Use ISR or manual revalidation once real data flows through the importer (details in [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)).
+
+## VPS quick start
+
+1. Copy environment defaults and adjust for the VPS:
+
+   ```bash
+   cp .env.example .env
+   # set DATABASE_URL=postgresql://postgres:postgres@db:5432/app?schema=public
+   # set SITE_URL/NEXT_PUBLIC_SITE_URL=https://finsite.example.com
+   ```
+
+2. Update `deploy/nginx/finsite.conf` with your domain(s) and request Let's Encrypt certificates (webroot challenge stored under `./.infra`):
+
+   ```bash
+   docker run --rm -it \
+     -v "$(pwd)/.infra/letsencrypt:/etc/letsencrypt" \
+     -v "$(pwd)/.infra/certbot:/var/www/certbot" \
+     certbot/certbot certonly --webroot \
+     --webroot-path=/var/www/certbot \
+     --email ops@example.com \
+     --agree-tos --no-eff-email \
+     -d finsite.example.com -d www.finsite.example.com
+   ```
+
+3. Build and start the stack (set `APP_IMAGE` if you want to reuse a pushed build; include the `db` profile when you need the bundled Postgres):
+
+   ```bash
+   # reuse a pushed image from GHCR or another registry
+   APP_IMAGE=ghcr.io/your-org/finsite:latest COMPOSE_PROFILES=app,nginx,db docker compose up -d
+
+   # or build locally (APP_IMAGE omitted)
+   COMPOSE_PROFILES=app,nginx,db docker compose up -d
+   ```
+
+4. Apply database migrations and seed the deterministic demo data (run the seed once on first deploy):
+
+   ```bash
+   docker compose exec -T app npx prisma migrate deploy --schema prisma/schema.prisma
+   docker compose exec -T app npm run db:seed
+   ```
+
+   > The seed script wipes existing rows before re-populating fixtures—use it only for initial deployments, staging, or demos.
+
+5. Verify HTTPS and health checks:
+
+   ```bash
+   curl -I https://finsite.example.com
+   curl https://finsite.example.com/healthz
+   ```
+
+The container entrypoint automatically runs Prisma migrations on every restart. Set `RUN_SEED_ON_START=true` in `.env` if you want automatic reseeding (useful for staging). See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md#vps-deployments) for advanced runbooks, systemd instructions, and GitHub Actions automation.
 
 ## Design system (shadcn/ui-inspired)
 
