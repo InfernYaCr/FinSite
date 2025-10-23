@@ -1,0 +1,19 @@
+[Unit]
+Description=FinSite Next.js application
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/finsite
+EnvironmentFile=/etc/finsite/finsite.env
+ExecStartPre=/usr/bin/env bash -c 'cd /var/www/finsite && npx prisma migrate deploy --schema prisma/schema.prisma'
+ExecStartPre=/usr/bin/env bash -c 'cd /var/www/finsite && if [ "${RUN_SEED_ON_START:-false}" = "true" ]; then npm run db:seed; fi'
+ExecStart=/usr/bin/env npm run start
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+User=finsite
+Group=finsite
+
+[Install]
+WantedBy=multi-user.target
