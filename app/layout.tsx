@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import AnalyticsScripts from '@/components/analytics/AnalyticsScripts'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import Sidebar from '@/components/layout/Sidebar'
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationJsonLd()} id="org-jsonld" />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <AnalyticsScripts />
         <div className="flex min-h-screen flex-col">
           <Nav />
           <main id="content" className="container mx-auto flex-1 px-4 py-6 sm:px-6 lg:px-8">

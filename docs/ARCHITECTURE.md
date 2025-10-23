@@ -183,6 +183,7 @@ For importer-specific storage (idempotency checkpoints, dry-run summaries), see 
 
 - **Structured logs**: Prisma emits `error`/`warn` events that are serialized as JSON (see `src/lib/prisma.ts`). The `/go/[offerId]` handler writes JSON log lines for every click, enabling ingestion by tools like ELK or Datadog.
 - **Database analytics**: Every redirect persists a `ClickTracking` row with UTM parameters, user agent, IP guess, and deduplicated affiliate identifiers. Use this table downstream for funnel analysis.
+- **Client analytics**: GA4, Meta Pixel, and Yandex Metrica load only after explicit consent. Environment-driven toggles and consent helpers live under `src/lib/analytics` (see [docs/ANALYTICS.md](./ANALYTICS.md)).
 - **Metrics hooks**: Add application-level metrics (e.g., Prometheus counters) around the same handler when moving to production. For Next.js edge instrumentation, drop a `instrumentation.ts` file at the repo root to wire custom spans.
 - **Error surfacing**: HTTP exceptions are normalized as JSON with status codes (400, 404, 500) so API consumers and log parsers can react programmatically.
 
