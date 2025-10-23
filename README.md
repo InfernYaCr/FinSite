@@ -26,6 +26,7 @@ The new docs folder centralizes onboarding and operational knowledge:
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) – system overview, data model, SEO strategy.
 - [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) – local + Vercel + VPS runbooks, revalidation notes.
 - [docs/DATA_IMPORT.md](./docs/DATA_IMPORT.md) – CSV formats, validation rules, importer workflow.
+- [docs/ANALYTICS.md](./docs/ANALYTICS.md) – consent-aware GA4, Meta Pixel, and Yandex Metrica configuration.
 - [docs/AI_HANDOFF.md](./docs/AI_HANDOFF.md) – project passport, prompts, coding conventions.
 
 Start with Architecture for context, then jump to Deployment or Data Import as needed.
@@ -57,6 +58,7 @@ Key environment variables (see `.env.example`):
 - `DATABASE_URL` – PostgreSQL connection string used by Prisma.
 - `SITE_URL` – Canonical server-side base URL for metadata helpers.
 - `NEXT_PUBLIC_SITE_URL` – Client-facing base URL.
+- `NEXT_PUBLIC_ANALYTICS_*` – Provider toggles + identifiers for GA4, Meta Pixel, and Yandex Metrica (see [docs/ANALYTICS.md](./docs/ANALYTICS.md)).
 
 ## Commands & scripts
 
